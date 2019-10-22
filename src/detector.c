@@ -239,10 +239,12 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 
         i = get_current_batch(net);
 
-        int calc_map_for_each = 4 * train_images_num / (net.batch * net.subdivisions);  // calculate mAP for each 4 Epochs
-        calc_map_for_each = fmax(calc_map_for_each, 100);
-        int next_map_calc = iter_map + calc_map_for_each;
-        next_map_calc = fmax(next_map_calc, net.burn_in);
+        //HS changing how often mAP is calculated
+        // int calc_map_for_each = 4 * train_images_num / (net.batch * net.subdivisions);  // calculate mAP for each 4 Epochs
+        // calc_map_for_each = fmax(calc_map_for_each, 100);
+        // int next_map_calc = iter_map + calc_map_for_each;
+        // next_map_calc = fmax(next_map_calc, net.burn_in);
+        int next_map_calc = iter_map + 500; //Added by HS
         next_map_calc = fmax(next_map_calc, 400);
         if (calc_map) {
             printf("\n (next mAP calculation at %d iterations) ", next_map_calc);
@@ -284,7 +286,8 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
                 best_map = mean_average_precision;
                 printf("New best mAP!\n");
                 char buff[256];
-                sprintf(buff, "%s/%s_best.weights", backup_directory, base);
+                //By HS 
+                sprintf(buff, "%s/%s_%d_%f.weights", backup_directory, base, i, best_map);
                 save_weights(net, buff);
             }
 
@@ -798,7 +801,7 @@ float validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, floa
             replace_image_to_label(path, labelpath);
             int num_labels = 0;
             box_label *truth = read_boxes(labelpath, &num_labels);
-            int j;
+            int i, j;
             for (j = 0; j < num_labels; ++j) {
                 truth_classes_count[truth[j].id]++;
             }
@@ -818,7 +821,6 @@ float validate_detector_map(char *datacfg, char *cfgfile, char *weightfile, floa
 
             const int checkpoint_detections_count = detections_count;
 
-            int i;
             for (i = 0; i < nboxes; ++i) {
 
                 int class_id;
