@@ -26,7 +26,13 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 {
     list *options = read_data_cfg(datacfg);
     char *train_images = option_find_str(options, "train", "data/train.txt");
-    char *valid_images = option_find_str(options, "valid", train_images);
+    
+    
+    //HS the original was the commented line below
+    //char *valid_images = option_find_str(options, "valid", train_images);
+    char *valid_images = option_find_str(options, "valid", "data/valid.txt");
+    
+
     char *backup_directory = option_find_str(options, "backup", "/backup/");
 
     network net_map;
@@ -156,6 +162,12 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
         args.mini_batch = net.batch / net.time_steps;
         printf("\n Tracking! batch = %d, subdiv = %d, time_steps = %d, mini_batch = %d \n", net.batch, net.subdivisions, net.time_steps, args.mini_batch);
     }
+
+    //HS
+    // printf("\n\n************** HS **********\n");
+    // printf(" imgs = %s \n", args.paths[0]);
+    // printf("\n************** HS **********\n\n");
+
     //printf(" imgs = %d \n", imgs);
 
     pthread_t load_thread = load_data(args);
@@ -202,22 +214,24 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
         }
         load_thread = load_data(args);
 
-        /*
-        int k;
-        for(k = 0; k < l.max_boxes; ++k){
-        box b = float_to_box(train.y.vals[10] + 1 + k*5);
-        if(!b.x) break;
-        printf("loaded: %f %f %f %f\n", b.x, b.y, b.w, b.h);
-        }
-        image im = float_to_image(448, 448, 3, train.X.vals[10]);
-        int k;
-        for(k = 0; k < l.max_boxes; ++k){
-        box b = float_to_box(train.y.vals[10] + 1 + k*5);
-        printf("%d %d %d %d\n", truth.x, truth.y, truth.w, truth.h);
-        draw_bbox(im, b, 8, 1,0,0);
-        }
-        save_image(im, "truth11");
-        */
+
+
+        //HS
+        // printf("\n\n************** HS **********\n");
+
+        // image im = float_to_image(448, 448, 3, train.X.vals[10]);
+
+        // for(int k = 0; k < l.max_boxes; ++k){
+        //     box b = float_to_box(train.y.vals[10] + 1 + k*5);
+        //     if(!b.x) break;
+        //     printf("loaded: %f %f %f %f\n", b.x, b.y, b.w, b.h);
+        // }
+        // save_image(im, "truth11");
+        
+
+        // printf("\n************** HS **********\n\n");
+
+
 
         printf("Loaded: %lf seconds\n", (what_time_is_it_now() - time));
 
@@ -1274,8 +1288,7 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
 
 
 void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh,
-    float hier_thresh, int dont_show, int ext_output, int save_labels, char *outfile, int letter_box)
-{
+    float hier_thresh, int dont_show, int ext_output, int save_labels, char *outfile, int letter_box){
     list *options = read_data_cfg(datacfg);
     char *name_list = option_find_str(options, "names", "data/names.list");
     int names_size = 0;
@@ -1423,6 +1436,145 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     free_network(net);
 }
 
+
+void hsTest_detector(char *datacfg, char *cfgfile, char *weightfile, char **argsv, int argsc){
+    //Defaults were: "-thresh", .25 "nms_thresh .45; "-hier", .5  "-iou_thresh", .5 
+    
+    printf("argsv:   %s\n", argsv[6]); 
+    float thresh = atof(argsv[6]);
+    float nms_thresh = atof(argsv[7]);
+    float hier_thresh = atof(argsv[8]);
+    char* saveImagesPath = argsv[9];
+
+    printf("\n\nHS youre using:\nconf_thresh:   %f\n", thresh);   
+    printf("nms_thresh:   %f\n", nms_thresh);  
+    printf("hier_thresh:   %f\n", hier_thresh);  
+    printf("saveImagesPath\n:%s\n\n\n", saveImagesPath);
+
+    
+    
+
+    list *options = read_data_cfg(datacfg);
+    char *name_list = option_find_str(options, "names", "data/names.list");
+    int names_size = 0;
+    char **names = get_labels_custom(name_list, &names_size); //get_labels(name_list);
+
+    image **alphabet = load_alphabet();
+    network net = parse_network_cfg_custom(cfgfile, 1, 1); // set batch=1
+    if (weightfile) {
+        load_weights(&net, weightfile);
+    }
+    fuse_conv_batchnorm(net);
+    calculate_binary_weights(net);
+    if (net.layers[net.n - 1].classes != names_size) {
+        printf(" Error: in the file %s number of names %d that isn't equal to classes=%d in the file %s \n",
+            name_list, names_size, net.layers[net.n - 1].classes, cfgfile);
+        if (net.layers[net.n - 1].classes > names_size) getchar();
+    }
+
+    char buff[256];
+    char *input = buff;
+
+    for(int i = 10; i < argsc; i++){
+        char * filename = argsv[i];
+
+
+        if (filename) {
+            strncpy(input, filename, 256);
+            if (strlen(input) > 0)
+                if (input[strlen(input) - 1] == 0x0d) input[strlen(input) - 1] = 0;
+        }
+        else printf("HS ERROR no iamge");
+
+        image im = load_image(input, 0, 0, net.c);
+        image sized;
+        sized = resize_image(im, net.w, net.h);
+        layer l = net.layers[net.n - 1];
+
+        float *X = sized.data;
+
+        double time = get_time_point();
+        
+        network_predict(net, X);
+
+        printf("%s: Predicted in %lf milli-seconds.\n", input, ((double)get_time_point() - time) / 1000);
+
+        int nboxes = 0;
+        detection *dets = get_network_boxes(&net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes, 0);
+        if (nms_thresh) do_nms_sort(dets, nboxes, l.classes, nms_thresh);
+        draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, 0);
+
+
+
+
+        char buff[256];
+        char *input = buff;
+        char buff1[256];
+        char *output = buff1;
+
+        strncpy(input, filename, 256);
+
+        char * imageNameJpg = strrchr(input, '/');
+        //printf("'%s'\n", imageNameJpg);
+        strncpy(output,saveImagesPath, 256);
+        strcat(output, imageNameJpg);
+
+
+        //HS
+        save_image(im, output);
+
+
+        //set to 0 to not save the labels
+        if (1){
+            char labelpath[4096];
+            replace_image_to_label(output, labelpath);
+
+            FILE* fw = fopen(labelpath, "wb");
+            int i;
+            for (i = 0; i < nboxes; ++i) {
+                char buff[1024];
+                int class_id = -1;
+                float prob = 0;
+                for (int j = 0; j < l.classes; ++j) {
+                    if (dets[i].prob[j] > thresh && dets[i].prob[j] > prob) {
+                        prob = dets[i].prob[j];
+                        class_id = j;
+                    }
+                }
+                if (class_id >= 0) {
+                    sprintf(buff, "%d %2.4f %2.4f %2.4f %2.4f %2.4f\n", class_id, prob, dets[i].bbox.x, dets[i].bbox.y, dets[i].bbox.w, dets[i].bbox.h);
+                    fwrite(buff, sizeof(char), strlen(buff), fw);
+                }
+            }
+            fclose(fw);
+        }
+
+
+        free_detections(dets, nboxes);
+        free_image(im);
+        free_image(sized);
+    }
+
+    // free memory
+    free_ptrs((void**)names, net.layers[net.n - 1].classes);
+    free_list_contents_kvp(options);
+    free_list(options);
+
+    int i;
+    const int nsize = 8;
+    for (int j = 0; j < nsize; ++j) {
+        for (i = 32; i < 127; ++i) {
+            free_image(alphabet[j][i]);
+        }
+        free(alphabet[j]);
+    }
+    free(alphabet);
+
+    free_network(net);
+}
+
+
+
 void run_detector(int argc, char **argv)
 {
     int dont_show = find_arg(argc, argv, "-dont_show");
@@ -1487,6 +1639,9 @@ void run_detector(int argc, char **argv)
             if (weights[strlen(weights) - 1] == 0x0d) weights[strlen(weights) - 1] = 0;
     char *filename = (argc > 6) ? argv[6] : 0;
     if (0 == strcmp(argv[2], "test")) test_detector(datacfg, cfg, weights, filename, thresh, hier_thresh, dont_show, ext_output, save_labels, outfile, letter_box);
+    if (0 == strcmp(argv[2], "hsTest")){
+        hsTest_detector(datacfg, cfg, weights, argv, argc);
+    }
     else if (0 == strcmp(argv[2], "train")) train_detector(datacfg, cfg, weights, gpus, ngpus, clear, dont_show, calc_map, mjpeg_port, show_imgs);
     else if (0 == strcmp(argv[2], "valid")) validate_detector(datacfg, cfg, weights, outfile);
     else if (0 == strcmp(argv[2], "recall")) validate_detector_recall(datacfg, cfg, weights);
