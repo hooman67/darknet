@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument('--data', dest='dataFilePath', type=str, help='full path to data file')
     parser.add_argument('--config', dest='configFilePath', type=str, help='full path to config file')
     parser.add_argument('--save', dest='plotSavePath', type=str, help='path to save results')
+    parser.add_argument('--csv', dest='csvFile', type=str, help='full path to precalculated csv file')
 
     return parser.parse_args()
 
@@ -72,24 +73,36 @@ def calcMaps(args):
     #     print("for:   " + cp_names[i] + "   found:  " + str(cp_maps[i]))
 
     return cp_names, cp_maps
+
+def loadMapsFromCsv(args):
+    cp_names = []
+    cp_maps = []
+    
+    loadF = open(args.csvFile, 'r')
+    lines = loadF.readlines()
+    for l in lines:
+        sp = l.split(",")
+        cp_names.append(sp[0])
+        cp_maps.append(float(sp[1]))
+
+    loadF.close()
+    return cp_names, cp_maps
    
 def hsMapPlotter(args):
-    cp_names, cp_maps = calcMaps(args)
+    if args.csvFile:
+        cp_names, cp_maps = loadMapsFromCsv(args)
+    else:
+        cp_names, cp_maps = calcMaps(args)
 
-    fig, ax = plt.subplots()
-    # set area we focus on
-    ax.set_ylim(0, 8)
 
-    major_locator = MultipleLocator()
-    minor_locator = MultipleLocator(0.5)
-    ax.yaxis.set_major_locator(major_locator)
-    ax.yaxis.set_minor_locator(minor_locator)
-    ax.yaxis.grid(True, which='minor')
-
-    ax.plot(cp_names, cp_maps)
+    plt.figure(figsize=(30,10))
+    #plt.axis([0, 130, 10, 50])
+    plt.plot(cp_names, cp_maps)
     plt.xlabel('checkpoint')
     plt.ylabel('map')
     plt.tight_layout()
+    ax = plt.axes()
+    ax.grid()
 
     plt.savefig(args.plotSavePath + 'validPlot.svg', dpi=300, format="svg")
 
