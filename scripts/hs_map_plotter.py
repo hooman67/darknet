@@ -46,8 +46,11 @@ def calcMaps(args):
 
     cpDic = {}
     for nm in os.listdir(args.path2Checkpoints):
-        val = int(nm.split("_")[1].split(".")[0])
-        cpDic[val] = str(nm)
+        if "last" in nm:
+            print("Error this script ignores the last checkpoint. It expects whatever_iteratioNb.weight format.")
+        else:
+            val = int(nm.split("_")[1].split(".")[0])
+            cpDic[val] = str(nm)
     
     keysList = list(cpDic.keys())
     keysList.sort()
