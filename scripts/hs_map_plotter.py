@@ -95,7 +95,7 @@ def hsMapPlotter(args):
         cp_names, cp_maps = calcMaps(args)
 
 
-    plt.figure(figsize=(30,10))
+    plt.figure(figsize=(50,10))
     #plt.axis([0, 130, 10, 50])
     plt.plot(cp_names, cp_maps)
     plt.xlabel('checkpoint')
