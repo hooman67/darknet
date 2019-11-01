@@ -311,9 +311,10 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
         draw_train_loss(img, img_size, avg_loss, max_img_loss, i, net.max_batches, mean_average_precision, draw_precision, "mAP%", dont_show, mjpeg_port);
 #endif    // OPENCV
 
-        //if (i % 1000 == 0 || (i < 1000 && i % 100 == 0)) {
-        //if (i % 100 == 0) {
-        if (i >= (iter_save + 1000) || i % 1000 == 0) {
+        //HS original was saving checkpoints every 1000 but I changed to every 200
+        //if (i >= (iter_save + 1000) || i % 1000 == 0) {
+        if (i >= (iter_save + 200) || i % 200 == 0) {
+            
             iter_save = i;
 #ifdef GPU
             if (ngpus != 1) sync_nets(nets, ngpus, 0);
@@ -1542,7 +1543,12 @@ void hsTest_detector(char *datacfg, char *cfgfile, char *weightfile, char **args
                     }
                 }
                 if (class_id >= 0) {
+                    //use this to save as preds (includes confidence)
                     sprintf(buff, "%d %2.4f %2.4f %2.4f %2.4f %2.4f\n", class_id, prob, dets[i].bbox.x, dets[i].bbox.y, dets[i].bbox.w, dets[i].bbox.h);
+                    
+                    //use this to save as label
+                    //sprintf(buff, "%d %2.4f %2.4f %2.4f %2.4f\n", class_id, dets[i].bbox.x, dets[i].bbox.y, dets[i].bbox.w, dets[i].bbox.h);
+                    
                     fwrite(buff, sizeof(char), strlen(buff), fw);
                 }
             }
