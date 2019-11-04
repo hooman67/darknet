@@ -95,7 +95,7 @@ def hsMapPlotter(args):
         cp_names, cp_maps = calcMaps(args)
 
 
-    plt.figure(figsize=(50,10))
+    plt.figure(figsize=(70,10))
     #plt.axis([0, 130, 10, 50])
     plt.plot(cp_names, cp_maps)
     plt.xlabel('checkpoint')
@@ -110,6 +110,12 @@ def hsMapPlotter(args):
     for i in range(len(cp_maps)):
         saveF.write(str(cp_names[i]) + ',' + str(cp_maps[i]) + '\n')
     saveF.close()
+
+    mxAc = max(cp_maps)
+    mxCp = cp_names[cp_maps.index(mxAc)]
+    print("\n\n*****checkPoint with highest accuracy:\n")
+    print("checkpoint:  " + str(mxCp) + '    mAP:  ' + str(mxAc) )
+    print('\n*****\n')
 
 
 
